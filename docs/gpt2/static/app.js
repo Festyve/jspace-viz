@@ -52,9 +52,19 @@ async function init() {
     STATIC = true;
     INFO = await (await fetch("data/index.json")).json();
     INFO.device = "precomputed";
-    $("topk").disabled = true;
-    $("chat").disabled = true;
-    $("live-label").hidden = true;
+    // These need a live model run; the demo is precomputed. Keep them visible
+    // but locked, and explain why (hover + click) instead of doing nothing.
+    $("live-label").hidden = false;
+    for (const id of ["topk", "chat", "live"]) {
+      const label = $(id).closest("label");
+      $(id).readOnly = true; // blocks typing in the number box (no-op on checkboxes)
+      label.classList.add("demo-locked");
+      label.title = "Precomputed demo — clone and run it locally to use this";
+      label.addEventListener("click", (e) => {
+        e.preventDefault(); // don't toggle/spin — explain instead
+        setStatus("top-k · chat · live only work when you run it locally — the demo is precomputed");
+      });
+    }
   }
   for (const link of INFO.links || []) {
     const a = document.createElement("a");
@@ -92,7 +102,7 @@ function renderWelcome() {
     : "Type any prompt above and hit <b>Read</b> (⌘↵), or start from an example:";
   $("grid").innerHTML =
     `<div class="welcome"><p>Every cell will show what a layer of <b>${esc(INFO.model_id)}</b> ` +
-    `is <i>disposed to say</i> at each word of your prompt — its thoughts, not just its answer.</p>` +
+    `is <i>disposed to say</i> at each word of your prompt.</p>` +
     `<p>${typeHint}</p><p>${chips}</p></div>`;
 }
 $("grid").addEventListener("click", (e) => {
@@ -102,8 +112,9 @@ $("grid").addEventListener("click", (e) => {
 });
 
 // Selecting an example types it out while the model reads along, so you
-// watch the workspace assemble as context accumulates. Static mode (no
-// server) loads it instantly instead.
+// watch the workspace assemble as context accumulates. Static mode has no
+// per-prefix reads to show, so it still types out but reveals the precomputed
+// full-prompt grid once the typing finishes.
 let playing = false;
 let playToken = 0;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -111,12 +122,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function loadExample(i) {
   const ex = INFO.examples[i];
   $("examples").value = String(i);
-  if (STATIC) {
-    selectedSlug = ex.slug;
-    $("prompt").value = ex.prompt;
-    read();
-    return;
-  }
+  if (STATIC) selectedSlug = ex.slug;
   const token = ++playToken;
   playing = true;
   const ta = $("prompt");
@@ -138,7 +144,9 @@ async function loadExample(i) {
       ta.scrollTop = ta.scrollHeight;
       wordsSinceRead += (added.match(/\s+/g) || []).length;
       const nWords = ta.value.trim().split(/\s+/).length;
-      if ($("live").checked && !reading && wordsSinceRead >= 2 && nWords >= 4) {
+      // Static mode has no per-prefix grids — only the full-prompt grid is
+      // precomputed — so skip live reads and just reveal it once typing ends.
+      if (!STATIC && $("live").checked && !reading && wordsSinceRead >= 2 && nWords >= 4) {
         wordsSinceRead = 0;
         read({ live: true });
       }

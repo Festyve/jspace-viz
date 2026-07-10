@@ -16,7 +16,11 @@ Models*](https://transformer-circuits.pub/2026/workspace/index.html)
 with one-click comparison against the vanilla logit lens and live plots of the
 paper's workspace-band signatures.
 
-![jspace-viz reading deepseek-coder while it mentally sorts a list](assets/screenshot.png)
+![demo: deepseek-coder reading a snippet word by word — the workspace panel fills with 'sorted' before the code is even complete](assets/demo.gif)
+
+*Every frame above is a real render: the app reading a growing prefix of the
+prompt, exactly what live-typing mode looks like. Regenerate with
+`scripts/make_demo_gif.py`.*
 
 ## Thirty seconds of use
 
@@ -29,7 +33,9 @@ print(nums[-1])
 # This prints
 ```
 
-What comes back (deepseek-coder-1.3b, screenshot above):
+What comes back (deepseek-coder-1.3b):
+
+![the full readout for the sort prompt](assets/screenshot.png)
 
 - **status line** — `model continues: "…: 3"`. Correct: the model sorted
   `[3, 1, 2]` in its head and indexed the result.

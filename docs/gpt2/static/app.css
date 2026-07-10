@@ -19,6 +19,7 @@ header h1 { margin: 0; font-size: 20px; letter-spacing: .5px; }
 select, input[type=number], button { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font-size: 13px; }
 input[type=number] { width: 56px; }
 label { color: var(--dim); font-size: 13px; display: flex; align-items: center; gap: 5px; }
+label.demo-locked { opacity: .45; cursor: help; }
 button { cursor: pointer; }
 button:hover { border-color: var(--accent); }
 button.primary { background: var(--accent); color: #04121f; font-weight: 600; padding: 5px 18px; }
