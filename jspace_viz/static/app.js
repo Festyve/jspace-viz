@@ -71,7 +71,14 @@ async function init() {
     opt.textContent = ex.name;
     $("examples").appendChild(opt);
   });
-  renderWelcome();
+  // Shareable links: /?prompt=... pre-fills and reads immediately.
+  const shared = new URLSearchParams(location.search).get("prompt");
+  if (shared && !STATIC) {
+    $("prompt").value = shared;
+    read();
+  } else {
+    renderWelcome();
+  }
 }
 
 // Blank-slate hint shown before the first read: what this is, plus the

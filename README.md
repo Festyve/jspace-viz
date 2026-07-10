@@ -16,7 +16,37 @@ Models*](https://transformer-circuits.pub/2026/workspace/index.html)
 with one-click comparison against the vanilla logit lens and live plots of the
 paper's workspace-band signatures.
 
-![screenshot](assets/screenshot.png)
+![jspace-viz reading deepseek-coder while it mentally sorts a list](assets/screenshot.png)
+
+## Thirty seconds of use
+
+Paste a fresh question — say, code whose answer requires *doing* something:
+
+```python
+nums = [3, 1, 2]
+nums.sort()
+print(nums[-1])
+# This prints
+```
+
+What comes back (deepseek-coder-1.3b, screenshot above):
+
+- **status line** — `model continues: "…: 3"`. Correct: the model sorted
+  `[3, 1, 2]` in its head and indexed the result.
+- **🧠 in the workspace right now** — top chip `sorted`, ahead of `output`,
+  `len`, `sorts`: while reading *unsorted* code, the model is holding the
+  concept of sortedness — the intermediate state its answer depends on,
+  visible before anything is said.
+- **the grid** — scroll to the `sort` column and read downward: early layers
+  see syntax, mid layers ignite the sorting/output concepts (watch the
+  `excess kurtosis` chart hump — that's the workspace band), late layers
+  converge on phrasing. Click any cell to trace that token's rank everywhere.
+- **logit lens toggle** — same activations, no Jacobian transport: the
+  mid-layer story disappears. That difference is the paper's contribution.
+
+Then flip on **live** and edit the code — change `sort()` to `reverse()` and
+watch the workspace swap `sorted` out. Every read is computed fresh; nothing
+is canned.
 
 ## What the Jacobian lens is
 
