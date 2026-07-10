@@ -102,7 +102,10 @@ GPT-2, or NeoX layout works via `--model-id` + `--lens`):
 Corpus follows the Neuronpedia convention (WikiText-103 stream, ≤128 tokens,
 first 16 positions skipped as attention sinks). Quality saturates fast: the
 paper reports ~10 prompts already beats the logit lens, ~100 is solid, 1000 is
-what they ship.
+what they ship. Empirically even the **1-prompt partial lens** already beats
+the logit lens on deepseek-coder-1.3b: on "The capital of France is" it reads
+` Paris` top-1 from layer 16 of 24, while the logit lens still reads generic
+filler (` usually`, ` either`) at the same depths.
 
 ## Roadmap
 
