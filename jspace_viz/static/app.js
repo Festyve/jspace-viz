@@ -58,6 +58,7 @@ async function read() {
     if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
     data = await res.json();
     renderGrid();
+    renderWorkspace();
     renderMetrics();
     setStatus(`${data.seq_len} tokens × ${data.layers.length} layers · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
   } catch (e) {
@@ -118,6 +119,52 @@ function renderPinned() {
     )
     .join("");
 }
+
+// "What is it thinking about": aggregate mid-band lens tokens that are real
+// words, not words from the prompt — i.e. the J-space content. Click to trace.
+const STOP = new Set("the a an is are was were be been of to in on at for and or but not it its this that with as by from he she they we you i his her their".split(" "));
+function renderWorkspace() {
+  const { grid, vocab, context_ids, seq_len } = data;
+  const fitted = grid.filter((r) => !r.is_output);
+  const band = fitted.slice(Math.floor(fitted.length * 0.25), Math.ceil(fitted.length * 0.85));
+  const promptWords = new Set(context_ids.map((id) => (vocab[id] || "").trim().toLowerCase()));
+  const scores = new Map(); // word -> {score, id, str}
+  for (const row of band) {
+    for (let t = 4; t < seq_len; t++) {
+      row.top_ids[t].forEach((id, i) => {
+        const str = vocab[id] || "";
+        const w = str.trim().toLowerCase();
+        // word-start tokens only (leading space in BPE) — filters subword junk
+        if (!str.startsWith(" ") && !str.startsWith("▁")) return;
+        if (!/^[a-z][a-z'’-]{2,}$/i.test(str.trim())) return;
+        if (promptWords.has(w) || STOP.has(w)) return;
+        const p = row.top_probs[t][i];
+        if (p < 0.03) return; // diffuse noise doesn't accumulate
+        const e = scores.get(w) || { score: 0, id, str };
+        e.score += p;
+        if (!scores.has(w)) scores.set(w, e);
+      });
+    }
+  }
+  const top = [...scores.values()].sort((a, b) => b.score - a.score).slice(0, 10);
+  const panel = $("workspace-panel");
+  panel.hidden = top.length === 0;
+  $("workspace-chips").innerHTML = top
+    .map((e) => `<span class="ws-chip" data-id="${e.id}">${esc(e.str.trim())}<span class="score">${e.score.toFixed(1)}</span></span>`)
+    .join("");
+}
+$("workspace-chips").addEventListener("click", (e) => {
+  const chip = e.target.closest(".ws-chip");
+  if (!chip || !data) return;
+  const id = +chip.dataset.id;
+  if (!pinned.some((p) => p.id === id)) {
+    if (pinned.length >= 16) pinned.shift();
+    pinned.push({ id, str: data.vocab[id] ?? "?" });
+  }
+  rankViewId = id;
+  renderPinned();
+  read();
+});
 
 function renderMetrics() {
   const ms = data.layer_metrics;

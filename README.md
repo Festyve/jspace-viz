@@ -61,19 +61,40 @@ uv venv && uv pip install -e '.[fit]'
 # → open http://127.0.0.1:8321
 ```
 
-In the UI:
+## How to read the screen (start here)
 
-- **cells** show the lens top-1 token per (layer, position); opacity = probability.
-  The bottom row is the model's actual output (`J = I` at the final layer).
-- **hover** a cell for the top-k readout, entropy, and excess kurtosis.
-- **click** a cell to pin its token and switch to a **rank heatmap** — track
-  where in the network (and at which positions) a concept is active, like the
-  paper's rank-tracking charts.
-- **J-lens ↔ logit lens** toggle: see exactly where the logit lens falls apart
-  in middle layers and the Jacobian transport keeps decoding.
-- **metrics panel**: per-layer next-token accuracy, mean excess kurtosis, and
-  adjacent-position top-1 autocorrelation — the structural signatures the
-  paper uses to bound the workspace band (kurtosis band shaded, heuristic).
+Type any prompt — anything at all — and hit **Read**. The grid is the model's
+processing unrolled:
+
+- **Each column is one token of your prompt** (`·` marks a leading space,
+  `⏎` a newline). **Each row is one layer**, shallow at the top; the
+  blue-bordered bottom row is what the model *actually says next*.
+- **Each cell answers**: "if the model had to speak from this layer at this
+  position, what word would come out?" Bluer = more confident.
+- **🧠 "in the workspace right now"** is the shortcut for *what is it thinking
+  about*: mid-layer concepts that are **not** words from your prompt and
+  **not** the literal next word — i.e. content the model is holding, not
+  copying. On the multi-hop boot example, GPT-2's workspace contains currency
+  concepts before any currency word is ever said. Click a chip to trace it.
+- **Click any cell (or chip)** to switch to a **rank heatmap** for that token:
+  `★0` = the #1 thing on the model's mind at that (layer, position); 30000 =
+  not a thought at all. Watch a concept *ignite* mid-stack — the paper's
+  rank-tracking charts, live.
+- **J-lens ↔ logit lens** toggle: the same grid without the Jacobian
+  transport. Mid-layer cells collapse into filler — that contrast is the
+  paper's contribution.
+- **hover** a cell for its full top-k readout, entropy (H) and excess
+  kurtosis (spikiness).
+- **charts** (x = depth): next-token accuracy stays ~0 until late layers
+  (early layers don't predict words); excess kurtosis humps in the middle —
+  the shaded region is the heuristic **workspace band** where verbalizable
+  content lives; autocorrelation measures whether neighboring positions share
+  a thought.
+
+Caveat: GPT-2 is a small 2019 model — its workspace is genuinely murky (you
+will see word-fragments among the readouts). It's the instant demo. The
+DeepSeek preset (and anything ≥1B, e.g. the prebaked Gemma/Llama lenses) reads
+far cleaner.
 
 ## DeepSeek (or any other model)
 
@@ -106,6 +127,28 @@ what they ship. Empirically even the **1-prompt partial lens** already beats
 the logit lens on deepseek-coder-1.3b: on "The capital of France is" it reads
 ` Paris` top-1 from layer 16 of 24, while the logit lens still reads generic
 filler (` usually`, ` either`) at the same depths.
+
+## Host it as a website (free)
+
+The app is a normal FastAPI server, so any Docker host works. The zero-cost
+path is a **Hugging Face Space** (the included `Dockerfile` is Space-ready and
+serves the gpt2 preset on the free CPU tier):
+
+1. Create a Space at huggingface.co/new-space → SDK: **Docker** → CPU basic (free).
+2. Push this repo to it:
+
+   ```bash
+   huggingface-cli login          # one-time
+   git remote add space https://huggingface.co/spaces/<you>/jspace-viz
+   git push space main
+   ```
+
+3. First boot downloads GPT-2 + the prebaked lens (~1 min), then it's a public
+   URL anyone can play with. Reads take a few seconds on the free CPU.
+
+Bigger models (the DeepSeek preset etc.) want a GPU Space (paid) or your own
+box — edit the `CMD` line in the `Dockerfile` and ship the lens file with the
+Space or a Hub repo.
 
 ## Roadmap
 

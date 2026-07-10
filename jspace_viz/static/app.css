@@ -33,6 +33,12 @@ button.primary { background: var(--accent); color: #04121f; font-weight: 600; pa
 .pin-chip .x { color: var(--dim); }
 .pin-chip .x:hover { color: #f85149; }
 
+#workspace-panel { margin: 2px 18px 8px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+#workspace-panel h3 { margin: 0 0 6px; font-size: 12px; color: var(--dim); font-weight: 500; }
+.ws-chip { display: inline-flex; align-items: baseline; gap: 6px; background: #1c2129; border: 1px solid var(--border); border-radius: 20px; padding: 3px 12px; margin: 0 6px 6px 0; font-family: var(--mono); font-size: 13px; cursor: pointer; }
+.ws-chip:hover { border-color: var(--hot); }
+.ws-chip .score { color: var(--dim); font-size: 10px; }
+
 #grid-wrap { overflow: auto; margin: 6px 18px; border: 1px solid var(--border); border-radius: 8px; max-height: 58vh; background: var(--panel); }
 #grid { display: grid; font-family: var(--mono); font-size: 11px; width: max-content; }
 .cell, .hcell, .lcell {
