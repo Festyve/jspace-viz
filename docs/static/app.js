@@ -315,5 +315,7 @@ $("read").addEventListener("click", read);
 $("prompt").addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "Enter") read();
 });
+// Editing the prompt by hand means it's no longer the selected example.
+$("prompt").addEventListener("input", () => { $("examples").value = ""; });
 
 init().catch((e) => setStatus(e.message, true));
