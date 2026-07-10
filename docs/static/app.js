@@ -52,9 +52,19 @@ async function init() {
     STATIC = true;
     INFO = await (await fetch("data/index.json")).json();
     INFO.device = "precomputed";
-    $("topk").disabled = true;
-    $("chat").disabled = true;
-    $("live-label").hidden = true;
+    // These need a live model run; the demo is precomputed. Keep them visible
+    // but locked, and explain why (hover + click) instead of doing nothing.
+    $("live-label").hidden = false;
+    for (const id of ["topk", "chat", "live"]) {
+      const label = $(id).closest("label");
+      $(id).readOnly = true; // blocks typing in the number box (no-op on checkboxes)
+      label.classList.add("demo-locked");
+      label.title = "Precomputed demo — clone and run it locally to use this";
+      label.addEventListener("click", (e) => {
+        e.preventDefault(); // don't toggle/spin — explain instead
+        setStatus("top-k · chat · live only work when you run it locally — the demo is precomputed");
+      });
+    }
   }
   for (const link of INFO.links || []) {
     const a = document.createElement("a");
