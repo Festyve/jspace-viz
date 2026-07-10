@@ -56,15 +56,18 @@ Rising toward 1.0 with layer is the expected convergence pattern (early-layer
 Jacobians have the highest per-prompt variance), confirming the estimators
 match.
 
-## Quick start
+## Quick start — type anything
 
 ```bash
 git clone https://github.com/Festyve/jspace-viz && cd jspace-viz
 uv venv && uv pip install -e '.[fit]'
 
-# instant demo: GPT-2 + prebaked community lens (auto-downloads)
+# DeepSeek + this repo's published lens (both auto-download, ~3 GB total)
+.venv/bin/jspace-viz --preset deepseek-coder-1.3b
+# → open http://127.0.0.1:8321 and type any prompt
+
+# or the featherweight instant version (GPT-2 + Neuronpedia lens, ~600 MB)
 .venv/bin/jspace-viz --preset gpt2
-# → open http://127.0.0.1:8321
 ```
 
 ## How to read the screen (start here)
@@ -121,7 +124,7 @@ GPT-2, or NeoX layout works via `--model-id` + `--lens`):
 |---|---|---|---|
 | `gpt2` | gpt2 (124M) | prebaked (Neuronpedia) | anything |
 | `pythia-70m` | Pythia-70m | prebaked (Neuronpedia) | anything |
-| `deepseek-coder-1.3b` | deepseek-coder-1.3b-instruct | fit locally (~hours on M-series) | 16 GB laptop |
+| `deepseek-coder-1.3b` | deepseek-coder-1.3b-instruct | prebaked ([Festyve/jspace-lenses](https://huggingface.co/Festyve/jspace-lenses)) or refit locally | 16 GB laptop |
 | `gemma-3-1b-it` | Gemma-3-1B-it (gated) | prebaked (Neuronpedia) | 16 GB laptop |
 | `llama-3.1-8b-it` | Llama-3.1-8B-it (gated) | prebaked (Neuronpedia) | 24 GB+ GPU |
 | `deepseek-r1-distill-llama-8b` | R1-Distill-Llama-8B | fit yourself | A100-class GPU |

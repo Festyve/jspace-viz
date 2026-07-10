@@ -91,6 +91,7 @@ def load(preset_name: str | None, model_id: str | None, lens_path: str | None, d
         model_id = model_id or preset.model_id
         dtype = dtype or preset.dtype
         if lens_path is None:
+            state["lens_source"] = ":".join(preset.lens)
             kind, *rest = preset.lens
             if kind == "hub":
                 repo, filename = rest
@@ -98,13 +99,23 @@ def load(preset_name: str | None, model_id: str | None, lens_path: str | None, d
                 lens = JacobianLens.from_pretrained(repo, filename=filename)
             else:
                 (path,) = rest
-                if not os.path.exists(path):
+                if not os.path.isabs(path) and not os.path.exists(path):
+                    # Relative preset paths resolve against the repo root, so
+                    # the server works regardless of the launch directory.
+                    repo_root = Path(__file__).parent.parent
+                    path = str(repo_root / path)
+                if not os.path.exists(path) and preset.lens_fallback is not None:
+                    repo, filename = preset.lens_fallback
+                    logger.info("no local lens; downloading %s :: %s", repo, filename)
+                    lens = JacobianLens.from_pretrained(repo, filename=filename)
+                    state["lens_source"] = f"hub:{repo}:{filename}"
+                elif not os.path.exists(path):
                     raise SystemExit(
                         f"lens file {path!r} not found — fit one first:\n"
                         f"  python scripts/fit_lens.py --preset {preset_name}"
                     )
-                lens = JacobianLens.load(path)
-            state["lens_source"] = ":".join(preset.lens)
+                else:
+                    lens = JacobianLens.load(path)
     if lens_path is not None:
         lens = JacobianLens.load(lens_path)
         state["lens_source"] = lens_path

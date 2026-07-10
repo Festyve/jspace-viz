@@ -21,14 +21,19 @@ class Preset:
     lens: tuple[str, ...]
     dtype: str = "auto"
     notes: str = ""
+    #: (hub_repo, filename) tried when a "file" lens is absent — lets cloners
+    #: use a published lens without fitting.
+    lens_fallback: tuple[str, str] | None = None
 
 
 PRESETS: dict[str, Preset] = {
-    # Runs (and fits) on a 16 GB Apple-Silicon laptop.
+    # Runs (and fits) on a 16 GB Apple-Silicon laptop. A local lens wins if
+    # you fit one; otherwise the published lens downloads from the Hub.
     "deepseek-coder-1.3b": Preset(
         model_id="deepseek-ai/deepseek-coder-1.3b-instruct",
         lens=("file", "lenses/deepseek-coder-1.3b-instruct_jlens_wikitext.pt"),
-        notes="Fit locally with scripts/fit_lens.py (no public DeepSeek lens exists).",
+        lens_fallback=("Festyve/jspace-lenses", "deepseek-coder-1.3b-instruct/lens.pt"),
+        notes="Prebaked lens (40 WikiText prompts, fit on an M4); refit with scripts/fit_lens.py.",
     ),
     # Instant smoke test: tiny model, prebaked community lens.
     "gpt2": Preset(
