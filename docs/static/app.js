@@ -162,6 +162,14 @@ async function read(opts = {}) {
     renderGrid();
     renderWorkspace();
     renderMetrics();
+    if (opts.live) {
+      for (const id of ["workspace-panel", "grid-wrap"]) {
+        const el = $(id);
+        el.classList.remove("flash");
+        void el.offsetWidth; // restart the animation
+        el.classList.add("flash");
+      }
+    }
     const says = data.continuation ? `${modelSays()} · ` : "";
     setStatus(`${says}${data.seq_len} tokens × ${data.layers.length} layers · ${((performance.now() - t0) / 1000).toFixed(1)}s${opts.live ? " · live" : ""}`);
   } catch (e) {

@@ -43,6 +43,11 @@ button.primary { background: var(--accent); color: #04121f; font-weight: 600; pa
   from { transform: scale(.55); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+.flash { animation: border-flash .7s ease-out; }
+@keyframes border-flash {
+  from { border-color: var(--accent); box-shadow: 0 0 14px rgba(88, 166, 255, .35); }
+  to { border-color: var(--border); box-shadow: none; }
+}
 
 .welcome { padding: 26px 30px; max-width: 640px; color: var(--dim); font-size: 14px; line-height: 1.6; }
 .welcome b, .welcome i, .welcome em { color: var(--fg); }
