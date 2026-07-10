@@ -28,6 +28,15 @@ function setStatus(msg, err = false) {
   el.className = err ? "err" : "";
 }
 
+// The model's actual next words (output row, last position) — shown in the
+// status line so "what does it answer" never has to be hunted for.
+function modelSays() {
+  const out = data.grid[data.grid.length - 1];
+  const t = data.seq_len - 1;
+  const words = out.top_ids[t].slice(0, 3).map((id) => tokStr(data.vocab[id]));
+  return `model says: ${words.map((w) => `“${w}”`).join(" ")}`;
+}
+
 async function init() {
   try {
     const res = await fetch("api/info");
@@ -85,7 +94,7 @@ async function read() {
       renderGrid();
       renderWorkspace();
       renderMetrics();
-      setStatus(`${data.seq_len} tokens × ${data.layers.length} layers · precomputed demo — run it locally to type your own prompts`);
+      setStatus(`${modelSays()} · ${data.seq_len} tokens × ${data.layers.length} layers · precomputed demo`);
       return;
     }
     const res = await fetch("api/read", {
@@ -104,7 +113,7 @@ async function read() {
     renderGrid();
     renderWorkspace();
     renderMetrics();
-    setStatus(`${data.seq_len} tokens × ${data.layers.length} layers · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+    setStatus(`${modelSays()} · ${data.seq_len} tokens × ${data.layers.length} layers · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
   } catch (e) {
     setStatus(e.message, true);
   } finally {
