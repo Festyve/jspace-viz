@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jspace-viz"
+version = "0.1.0"
+description = "Live J-space / Jacobian-lens visualizer for open-weights language models"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+dependencies = [
+    "torch",
+    "transformers",
+    "numpy",
+    "huggingface_hub",
+    "fastapi",
+    "uvicorn",
+]
+
+[project.optional-dependencies]
+fit = ["datasets"]
+
+[project.scripts]
+jspace-viz = "jspace_viz.server:main"
+
+[project.urls]
+Repository = "https://github.com/Festyve/jspace-viz"
+Paper = "https://transformer-circuits.pub/2026/workspace/index.html"
+
+[tool.setuptools]
+packages = ["jspace_viz"]
+
+[tool.setuptools.package-data]
+jspace_viz = ["static/*"]
