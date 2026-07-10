@@ -2,6 +2,10 @@
 
 **Live J-space / Jacobian-lens visualizer for open-weights language models.**
 
+**[▶ Try the demo](https://festyve.github.io/jspace-viz/)** — serverless GPT-2
+build with precomputed example prompts (full UI: lens toggle, workspace panel,
+click-to-trace ranks). Run locally to type your own prompts at any model.
+
 Type a prompt, watch what every layer of the model is *disposed to say* at
 every token position — the "verbalizable workspace" from Anthropic's
 [*Verbalizable Representations Form a Global Workspace in Language
@@ -128,27 +132,19 @@ the logit lens on deepseek-coder-1.3b: on "The capital of France is" it reads
 ` Paris` top-1 from layer 16 of 24, while the logit lens still reads generic
 filler (` usually`, ` either`) at the same depths.
 
-## Host it as a website (free)
+## Host it as a website
 
-The app is a normal FastAPI server, so any Docker host works. The zero-cost
-path is a **Hugging Face Space** (the included `Dockerfile` is Space-ready and
-serves the gpt2 preset on the free CPU tier):
+Two options:
 
-1. Create a Space at huggingface.co/new-space → SDK: **Docker** → CPU basic (free).
-2. Push this repo to it:
-
-   ```bash
-   huggingface-cli login          # one-time
-   git remote add space https://huggingface.co/spaces/<you>/jspace-viz
-   git push space main
-   ```
-
-3. First boot downloads GPT-2 + the prebaked lens (~1 min), then it's a public
-   URL anyone can play with. Reads take a few seconds on the free CPU.
-
-Bigger models (the DeepSeek preset etc.) want a GPU Space (paid) or your own
-box — edit the `CMD` line in the `Dockerfile` and ship the lens file with the
-Space or a Hub repo.
+- **Serverless demo (free)** — `python scripts/export_static.py --preset gpt2`
+  precomputes the grids (with full rank tables, so pin/trace works without a
+  backend) for the example prompts into `docs/`, ready for GitHub Pages or any
+  static host. That's what the [live demo](https://festyve.github.io/jspace-viz/)
+  is. Visitors can't type new prompts — everything else works.
+- **Full app (needs a real machine)** — the server holds a model in memory, so
+  free serverless tiers (Vercel/Netlify) can't run it. The included
+  `Dockerfile` deploys anywhere Docker runs; on Hugging Face, Docker Spaces
+  require a PRO subscription as of mid-2026.
 
 ## Roadmap
 
