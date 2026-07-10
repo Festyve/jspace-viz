@@ -2,9 +2,11 @@
 
 **Live J-space / Jacobian-lens visualizer for open-weights language models.**
 
-**[▶ Try the demo](https://festyve.github.io/jspace-viz/)** — serverless GPT-2
-build with precomputed example prompts (full UI: lens toggle, workspace panel,
-click-to-trace ranks). Run locally to type your own prompts at any model.
+**[▶ Try the demo](https://festyve.github.io/jspace-viz/)** — serverless
+demo of **deepseek-coder-1.3b** (40-prompt lens fit on a laptop; GPT-2
+comparison page linked in its header) with precomputed example prompts — full
+UI: lens toggle, workspace panel, click-to-trace ranks, model continuations.
+Run locally to type your own prompts at any model.
 
 Type a prompt, watch what every layer of the model is *disposed to say* at
 every token position — the "verbalizable workspace" from Anthropic's

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jspace-viz — live J-space visualizer</title>
+<link rel="stylesheet" href="static/app.css">
+</head>
+<body>
+<header>
+  <h1>jspace-viz</h1>
+  <span class="sub">live Jacobian-lens / J-space readout &middot; <a href="https://transformer-circuits.pub/2026/workspace/index.html" target="_blank" rel="noopener">paper</a></span>
+  <span id="model-chip" class="chip">loading&hellip;</span>
+  <span id="lens-chip" class="chip"></span>
+</header>
+
+<section id="controls">
+  <textarea id="prompt" rows="4" spellcheck="false" placeholder="Type anything — a question, half a sentence, some code — then press Read (⌘↵) to see what every layer of the model is thinking at every word."></textarea>
+  <div class="row">
+    <select id="examples"><option value="">examples&hellip;</option></select>
+    <div class="toggle" id="mode-toggle">
+      <button data-mode="jlens" class="active" title="transport with J_l before unembedding">J-lens</button>
+      <button data-mode="logit" title="unembed the raw residual (J = I baseline)">logit lens</button>
+    </div>
+    <label>top-k <input id="topk" type="number" min="1" max="20" value="8"></label>
+    <label title="wrap the prompt in the model's chat template"><input id="chat" type="checkbox"> chat</label>
+    <button id="read" class="primary">Read</button>
+    <span id="status"></span>
+  </div>
+  <div class="row" id="pinned-row" hidden>
+    <span class="hint">pinned:</span>
+    <span id="pinned-chips"></span>
+    <button id="view-top1" hidden>back to top-1 view</button>
+  </div>
+</section>
+
+<section id="workspace-panel" hidden>
+  <h3 title="Concepts active in the middle layers that are neither words from your prompt nor the model's literal next word — the J-space content. Click one to trace where it lives.">🧠 in the workspace right now</h3>
+  <div id="workspace-chips"></div>
+</section>
+
+<section id="grid-wrap"><div id="grid"></div></section>
+
+<section id="metrics">
+  <div class="metric"><h3 title="fraction of positions where the lens top-1 equals the actual next token">next-token accuracy</h3><svg id="m-acc"></svg></div>
+  <div class="metric"><h3 title="mean excess kurtosis of lens logits — the paper's workspace-layer signature">excess kurtosis</h3><svg id="m-kurt"></svg></div>
+  <div class="metric"><h3 title="fraction of adjacent positions sharing the same lens top-1 token">top-1 autocorrelation</h3><svg id="m-auto"></svg></div>
+</section>
+
+<div id="tooltip" hidden></div>
+<script src="static/app.js"></script>
+</body>
+</html>
