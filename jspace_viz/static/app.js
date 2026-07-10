@@ -54,6 +54,7 @@ async function init() {
     INFO.device = "precomputed";
     $("topk").disabled = true;
     $("chat").disabled = true;
+    $("live-label").hidden = true;
   }
   for (const link of INFO.links || []) {
     const a = document.createElement("a");
@@ -109,13 +110,18 @@ function applyStaticPins() {
   });
 }
 
-async function read() {
+let reading = false;   // one read in flight at a time; latest text wins after
+let rerunLive = false;
+
+async function read(opts = {}) {
   if (!$("prompt").value.trim()) {
     renderWelcome();
     setStatus("type a prompt first, or pick an example");
     return;
   }
-  setStatus("reading…");
+  if (reading) { rerunLive = true; return; }
+  reading = true;
+  if (!opts.live) setStatus("reading…");
   $("read").disabled = true;
   const t0 = performance.now();
   try {
@@ -148,6 +154,7 @@ async function read() {
         top_k: +$("topk").value,
         chat: $("chat").checked,
         pinned_ids: pinned.map((p) => p.id),
+        continuation: !opts.live,
       }),
     });
     if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
@@ -155,11 +162,17 @@ async function read() {
     renderGrid();
     renderWorkspace();
     renderMetrics();
-    setStatus(`${modelSays()} · ${data.seq_len} tokens × ${data.layers.length} layers · ${((performance.now() - t0) / 1000).toFixed(1)}s`);
+    const says = data.continuation ? `${modelSays()} · ` : "";
+    setStatus(`${says}${data.seq_len} tokens × ${data.layers.length} layers · ${((performance.now() - t0) / 1000).toFixed(1)}s${opts.live ? " · live" : ""}`);
   } catch (e) {
     setStatus(e.message, true);
   } finally {
     $("read").disabled = false;
+    reading = false;
+    if (rerunLive) {
+      rerunLive = false;
+      read({ live: true });
+    }
   }
 }
 
@@ -254,8 +267,14 @@ function renderWorkspace() {
     .slice(0, 10);
   const panel = $("workspace-panel");
   panel.hidden = top.length === 0;
+  const previous = renderWorkspace._last || new Set();
+  renderWorkspace._last = new Set(top.map((e) => e.str.trim().toLowerCase()));
   $("workspace-chips").innerHTML = top
-    .map((e) => `<span class="ws-chip" data-id="${e.id}">${esc(e.str.trim())}<span class="score">${e.adj.toFixed(1)}</span></span>`)
+    .map((e) => {
+      const word = e.str.trim();
+      const pop = previous.has(word.toLowerCase()) ? "" : " pop";
+      return `<span class="ws-chip${pop}" data-id="${e.id}">${esc(word)}<span class="score">${e.adj.toFixed(1)}</span></span>`;
+    })
     .join("");
 }
 $("workspace-chips").addEventListener("click", (e) => {
@@ -381,6 +400,13 @@ $("prompt").addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "Enter") read();
 });
 // Editing the prompt by hand means it's no longer the selected example.
-$("prompt").addEventListener("input", () => { $("examples").value = ""; });
+// In live mode, re-read as you type (debounced) — watch the thoughts move.
+let liveTimer = null;
+$("prompt").addEventListener("input", () => {
+  $("examples").value = "";
+  if (STATIC || !$("live").checked) return;
+  clearTimeout(liveTimer);
+  liveTimer = setTimeout(() => read({ live: true }), 650);
+});
 
 init().catch((e) => setStatus(e.message, true));

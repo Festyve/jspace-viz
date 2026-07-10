@@ -38,6 +38,7 @@ def read_grid(
     pinned_ids: list[int] | None = None,
     chat: bool = False,
     track_all: bool = False,
+    generate_continuation: bool = True,
 ) -> dict[str, Any]:
     """One forward pass, then per-layer lens readouts at every position.
 
@@ -70,16 +71,18 @@ def read_grid(
         acts = {l: recorder.activations[l].detach() for l in layers}
 
     # Greedy continuation for the "model says" readout — answers are phrases,
-    # not single tokens.
-    generated = model.hf_model.generate(
-        input_ids,
-        max_new_tokens=12,
-        do_sample=False,
-        pad_token_id=model.tokenizer.eos_token_id,
-    )
-    continuation = model.tokenizer.decode(
-        generated[0, seq_len:], skip_special_tokens=True
-    )
+    # not single tokens. Skipped for latency-sensitive live-typing reads.
+    continuation = None
+    if generate_continuation:
+        generated = model.hf_model.generate(
+            input_ids,
+            max_new_tokens=12,
+            do_sample=False,
+            pad_token_id=model.tokenizer.eos_token_id,
+        )
+        continuation = model.tokenizer.decode(
+            generated[0, seq_len:], skip_special_tokens=True
+        )
 
     next_ids = input_ids[0, 1:].to(model.device)  # target for next-token acc
     valid = slice(METRICS_SKIP_FIRST, seq_len - 1)

@@ -33,6 +33,7 @@ class ReadRequest(BaseModel):
     max_seq_len: int = Field(default=192, ge=8, le=512)
     chat: bool = False
     pinned_ids: list[int] = Field(default_factory=list, max_length=16)
+    continuation: bool = True  # False = latency-sensitive live-typing read
 
 
 app = FastAPI(title="jspace-viz")
@@ -79,6 +80,7 @@ def read(req: ReadRequest) -> dict[str, Any]:
             max_seq_len=req.max_seq_len,
             pinned_ids=req.pinned_ids,
             chat=req.chat,
+            generate_continuation=req.continuation,
         )
     except Exception as exc:  # surfaced to the UI status line
         logger.exception("read failed")
