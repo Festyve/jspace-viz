@@ -102,7 +102,7 @@ function renderWelcome() {
     : "Type any prompt above and hit <b>Read</b> (⌘↵), or start from an example:";
   $("grid").innerHTML =
     `<div class="welcome"><p>Every cell will show what a layer of <b>${esc(INFO.model_id)}</b> ` +
-    `is <i>disposed to say</i> at each word of your prompt — its thoughts, not just its answer.</p>` +
+    `is <i>disposed to say</i> at each word of your prompt.</p>` +
     `<p>${typeHint}</p><p>${chips}</p></div>`;
 }
 $("grid").addEventListener("click", (e) => {
