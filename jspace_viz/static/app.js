@@ -43,6 +43,13 @@ async function init() {
     $("chat").disabled = true;
     selectedSlug = INFO.examples[0].slug;
   }
+  for (const link of INFO.links || []) {
+    const a = document.createElement("a");
+    a.href = link.url;
+    a.className = "chip";
+    a.textContent = link.name;
+    document.querySelector("header").appendChild(a);
+  }
   $("model-chip").textContent = `${INFO.model_id} · ${INFO.n_layers}L · d=${INFO.d_model} · ${INFO.device}`;
   $("lens-chip").textContent = `lens: ${INFO.fitted_layers.length} layers, ${INFO.lens_n_prompts} prompts`;
   INFO.examples.forEach((ex, i) => {

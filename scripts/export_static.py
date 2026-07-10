@@ -38,10 +38,16 @@ def main() -> None:
     parser.add_argument("--preset", default="gpt2")
     parser.add_argument("--out", default="docs")
     parser.add_argument("--top-k", type=int, default=8)
+    parser.add_argument("--device", default=None, help="cpu to avoid contending with a running fit")
+    parser.add_argument("--dtype", default=None)
+    parser.add_argument(
+        "--link", action="append", default=[],
+        help="'label=url' chips linking to sibling demo pages; repeatable",
+    )
     args = parser.parse_args()
 
     preset = PRESETS[args.preset]
-    model = load_model(preset.model_id, dtype=preset.dtype)
+    model = load_model(preset.model_id, dtype=args.dtype or preset.dtype, device=args.device)
     kind, *rest = preset.lens
     lens = (
         JacobianLens.from_pretrained(rest[0], filename=rest[1])
@@ -57,6 +63,10 @@ def main() -> None:
         "d_model": model.d_model,
         "fitted_layers": lens.source_layers,
         "lens_n_prompts": lens.n_prompts,
+        "links": [
+            {"name": name, "url": url}
+            for name, url in (spec.split("=", 1) for spec in args.link)
+        ],
         "examples": [],
     }
     for example in EXAMPLES:
