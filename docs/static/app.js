@@ -112,19 +112,32 @@ async function loadExample(i) {
   }
   const token = ++playToken;
   playing = true;
-  $("prompt").value = "";
-  const pieces = ex.prompt.split(/(\s+)/);
+  const ta = $("prompt");
+  ta.value = "";
+  // Clock-based so playback stays smooth at any frame rate and can't stall
+  // when the browser throttles timers in unfocused tabs.
+  const CHARS_PER_SEC = 70;
+  const start = performance.now();
   let wordsSinceRead = 0;
-  for (const piece of pieces) {
+  while (true) {
     if (token !== playToken) return; // superseded by another selection
-    $("prompt").value += piece;
-    if (piece.trim()) wordsSinceRead++;
-    await sleep(90);
-    const nWords = $("prompt").value.trim().split(/\s+/).length;
-    if ($("live").checked && !reading && wordsSinceRead >= 3 && nWords >= 4) {
-      wordsSinceRead = 0;
-      read({ live: true });
+    const target = Math.min(
+      ex.prompt.length,
+      Math.floor(((performance.now() - start) / 1000) * CHARS_PER_SEC),
+    );
+    if (target > ta.value.length) {
+      const added = ex.prompt.slice(ta.value.length, target);
+      ta.value = ex.prompt.slice(0, target);
+      ta.scrollTop = ta.scrollHeight;
+      wordsSinceRead += (added.match(/\s+/g) || []).length;
+      const nWords = ta.value.trim().split(/\s+/).length;
+      if ($("live").checked && !reading && wordsSinceRead >= 2 && nWords >= 4) {
+        wordsSinceRead = 0;
+        read({ live: true });
+      }
     }
+    if (target >= ex.prompt.length) break;
+    await sleep(16);
   }
   playing = false;
   if (token !== playToken) return;
@@ -196,7 +209,7 @@ async function read(opts = {}) {
     renderGrid();
     renderWorkspace();
     renderMetrics();
-    if (opts.live) {
+    if (opts.live && !playing) {
       for (const id of ["workspace-panel", "grid-wrap"]) {
         const el = $(id);
         el.classList.remove("flash");
@@ -258,7 +271,16 @@ function renderGrid() {
       parts.push(`<div class="cell${cls}" data-l="${li}" data-t="${t}" style="background:${bg}">${esc(text)}</div>`);
     }
   }
+  const wrap = $("grid-wrap");
+  const { scrollLeft, scrollTop } = wrap;
   grid.innerHTML = parts.join("");
+  if (playing) {
+    // follow the newest column while an example types itself out
+    wrap.scrollLeft = wrap.scrollWidth;
+  } else {
+    wrap.scrollLeft = scrollLeft;
+    wrap.scrollTop = scrollTop;
+  }
 }
 
 function renderPinned() {
