@@ -12,6 +12,7 @@ let rankViewId = null;    // token id whose ranks the grid shows, or null
 let STATIC = false;       // no backend: serve precomputed example grids
 let INFO = null;          // /api/info (or data/index.json) payload
 let selectedSlug = null;  // active example in static mode
+let colLimit = null;      // static demo: cap visible grid columns during reveal
 
 // Render a token for display: make whitespace visible, trim length.
 function tokStr(s) {
@@ -111,10 +112,11 @@ $("grid").addEventListener("click", (e) => {
   loadExample(+chip.dataset.i);
 });
 
-// Selecting an example types it out while the model reads along, so you
-// watch the workspace assemble as context accumulates. Static mode has no
-// per-prefix reads to show, so it still types out but reveals the precomputed
-// full-prompt grid once the typing finishes.
+// Selecting an example types it out while the model reads along, so you watch
+// the workspace assemble as context accumulates. The static demo has no
+// backend, but the model is causal — each precomputed column equals a fresh
+// read of that prefix — so we reveal columns as the words are typed, same
+// effect without a server.
 let playing = false;
 let playToken = 0;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -122,18 +124,38 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function loadExample(i) {
   const ex = INFO.examples[i];
   $("examples").value = String(i);
-  if (STATIC) selectedSlug = ex.slug;
   const token = ++playToken;
   playing = true;
   const ta = $("prompt");
   ta.value = "";
+
+  // Static demo: fetch the full precomputed grid up front, then reveal it
+  // column by column as the prompt types out (see note above). tokEnd[t] is the
+  // typed-character count at which column t's token is fully on screen.
+  let tokEnd = null;
+  if (STATIC) {
+    selectedSlug = ex.slug;
+    data = await (await fetch(`data/${selectedSlug}_${mode}.json`)).json();
+    if (token !== playToken) return;
+    applyStaticPins();
+    tokEnd = [];
+    let acc = 0;
+    for (let t = 0; t < data.seq_len; t++) {
+      if (t > 0) acc += (data.vocab[data.context_ids[t]] || "").length;
+      tokEnd[t] = acc; // the begin-of-sequence token adds no typed characters
+    }
+    colLimit = 1; // show that first column immediately, then grow with typing
+    renderGrid();
+    renderWorkspace();
+  }
+
   // Clock-based so playback stays smooth at any frame rate and can't stall
   // when the browser throttles timers in unfocused tabs.
   const CHARS_PER_SEC = 70;
   const start = performance.now();
   let wordsSinceRead = 0;
   while (true) {
-    if (token !== playToken) return; // superseded by another selection
+    if (token !== playToken) { colLimit = null; return; } // superseded
     const target = Math.min(
       ex.prompt.length,
       Math.floor(((performance.now() - start) / 1000) * CHARS_PER_SEC),
@@ -142,22 +164,42 @@ async function loadExample(i) {
       const added = ex.prompt.slice(ta.value.length, target);
       ta.value = ex.prompt.slice(0, target);
       ta.scrollTop = ta.scrollHeight;
-      wordsSinceRead += (added.match(/\s+/g) || []).length;
-      const nWords = ta.value.trim().split(/\s+/).length;
-      // Static mode has no per-prefix grids — only the full-prompt grid is
-      // precomputed — so skip live reads and just reveal it once typing ends.
-      if (!STATIC && $("live").checked && !reading && wordsSinceRead >= 2 && nWords >= 4) {
-        wordsSinceRead = 0;
-        read({ live: true });
+      if (STATIC) {
+        // grow the grid to every column whose token has now been typed
+        let n = colLimit;
+        while (n < data.seq_len && tokEnd[n] <= target) n++;
+        if (n !== colLimit) {
+          colLimit = Math.max(1, n);
+          renderGrid();
+          renderWorkspace();
+        }
+      } else {
+        wordsSinceRead += (added.match(/\s+/g) || []).length;
+        const nWords = ta.value.trim().split(/\s+/).length;
+        if ($("live").checked && !reading && wordsSinceRead >= 2 && nWords >= 4) {
+          wordsSinceRead = 0;
+          read({ live: true });
+        }
       }
     }
     if (target >= ex.prompt.length) break;
     await sleep(16);
   }
   playing = false;
-  if (token !== playToken) return;
-  while (reading) await sleep(100); // let the last live read settle
-  read();
+  if (token !== playToken) { colLimit = null; return; }
+  if (STATIC) {
+    colLimit = null; // reveal the full grid now that the prompt is complete
+    renderGrid();
+    renderWorkspace();
+    renderMetrics();
+    setStatus(
+      `${data.continuation ? modelSays() + " · " : ""}` +
+      `${data.seq_len} tokens × ${data.layers.length} layers · precomputed demo`,
+    );
+  } else {
+    while (reading) await sleep(100); // let the last live read settle
+    read();
+  }
 }
 
 // Static mode: ranks were precomputed for every token in any top-k cell;
@@ -260,16 +302,17 @@ function rankColor(r) {
 function renderGrid() {
   const grid = $("grid");
   const { layers, grid: rows, context_ids, vocab, seq_len } = data;
-  grid.style.gridTemplateColumns = `auto repeat(${seq_len}, max-content)`;
+  const cols = colLimit == null ? seq_len : Math.min(seq_len, colLimit);
+  grid.style.gridTemplateColumns = `auto repeat(${cols}, max-content)`;
   const parts = ['<div class="hcell corner">layer ╲ pos</div>'];
-  for (let t = 0; t < seq_len; t++) {
+  for (let t = 0; t < cols; t++) {
     parts.push(`<div class="hcell"><span class="idx">${t}</span>${esc(tokStr(vocab[context_ids[t]]))}</div>`);
   }
   for (let li = 0; li < layers.length; li++) {
     const row = rows[li];
     const cls = row.is_output ? " outrow" : "";
     parts.push(`<div class="lcell${cls}">${row.is_output ? "output" : "L" + row.layer}</div>`);
-    for (let t = 0; t < seq_len; t++) {
+    for (let t = 0; t < cols; t++) {
       let text, bg;
       const pi = rankViewId === null ? -1 : pinned.findIndex((p) => p.id === rankViewId);
       if (pi >= 0 && row.pinned_ranks && row.pinned_ranks[t][pi] != null) {
@@ -315,12 +358,13 @@ function renderPinned() {
 const STOP = new Set("the a an is are was were be been of to in on at for and or but not it its this that with as by from he she they we you i his her their".split(" "));
 function renderWorkspace() {
   const { grid, vocab, context_ids, seq_len } = data;
+  const cols = colLimit == null ? seq_len : Math.min(seq_len, colLimit);
   const fitted = grid.filter((r) => !r.is_output);
   const band = fitted.slice(Math.floor(fitted.length * 0.25), Math.ceil(fitted.length * 0.85));
-  const promptWords = new Set(context_ids.map((id) => (vocab[id] || "").trim().toLowerCase()));
+  const promptWords = new Set(context_ids.slice(0, cols).map((id) => (vocab[id] || "").trim().toLowerCase()));
   const scores = new Map(); // word -> {score, id, str}
   for (const row of band) {
-    for (let t = 4; t < seq_len; t++) {
+    for (let t = 4; t < cols; t++) {
       row.top_ids[t].forEach((id, i) => {
         const str = vocab[id] || "";
         const w = str.trim().toLowerCase();
