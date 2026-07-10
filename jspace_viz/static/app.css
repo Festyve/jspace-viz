@@ -23,6 +23,8 @@ label.demo-locked { opacity: .45; cursor: help; }
 button { cursor: pointer; }
 button:hover { border-color: var(--accent); }
 button.primary { background: var(--accent); color: #04121f; font-weight: 600; padding: 5px 18px; }
+#jump-gen { color: #7ee787; border-color: #2ea04366; font-weight: 600; }
+#jump-gen:hover { border-color: #7ee787; }
 .toggle { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
 .toggle button { border: 0; border-radius: 0; background: transparent; color: var(--dim); }
 .toggle button.active { background: var(--accent); color: #04121f; font-weight: 600; }

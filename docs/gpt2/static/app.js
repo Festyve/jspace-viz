@@ -344,7 +344,22 @@ function renderGrid() {
     wrap.scrollLeft = scrollLeft;
     wrap.scrollTop = scrollTop;
   }
+  // The generated columns are the highlight but sit far to the right — offer a
+  // jump when they exist and aren't already the whole grid.
+  $("jump-gen").hidden = !(promptLen < seq_len);
 }
+
+// Scroll the grid so the "↳ model says" boundary sits near the left edge,
+// keeping a couple of prompt columns visible for context. Uses live rects so
+// it's immune to the sticky-header / CSS-grid offsetParent quirks.
+function scrollToGeneration() {
+  const boundary = document.querySelector(".hcell.genb");
+  if (!boundary) return;
+  const wrap = $("grid-wrap");
+  const delta = boundary.getBoundingClientRect().left - wrap.getBoundingClientRect().left - 160;
+  wrap.scrollLeft = Math.max(0, wrap.scrollLeft + delta);
+}
+$("jump-gen").addEventListener("click", scrollToGeneration);
 
 function renderPinned() {
   $("pinned-row").hidden = pinned.length === 0;
