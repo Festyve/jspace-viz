@@ -64,14 +64,12 @@ def read_grid(
     pinned = list(pinned_ids or [])
 
     input_ids = model.encode(prompt, max_length=max_seq_len)
-    seq_len = input_ids.shape[1]
-    ids_list = input_ids[0].tolist()
-    with ActivationRecorder(model.layers, at=layers) as recorder:
-        model.forward(input_ids)
-        acts = {l: recorder.activations[l].detach() for l in layers}
+    prompt_len = input_ids.shape[1]
 
-    # Greedy continuation for the "model says" readout — answers are phrases,
-    # not single tokens. Skipped for latency-sensitive live-typing reads.
+    # Greedy continuation first — the recorded forward pass below then covers
+    # prompt AND response positions, so the grid shows what the model is
+    # thinking *while it speaks* (the paper's monitoring use case). Skipped
+    # for latency-sensitive live-typing reads.
     continuation = None
     if generate_continuation:
         generated = model.hf_model.generate(
@@ -81,8 +79,15 @@ def read_grid(
             pad_token_id=model.tokenizer.eos_token_id,
         )
         continuation = model.tokenizer.decode(
-            generated[0, seq_len:], skip_special_tokens=True
+            generated[0, prompt_len:], skip_special_tokens=True
         )
+        input_ids = generated
+
+    seq_len = input_ids.shape[1]
+    ids_list = input_ids[0].tolist()
+    with ActivationRecorder(model.layers, at=layers) as recorder:
+        model.forward(input_ids)
+        acts = {l: recorder.activations[l].detach() for l in layers}
 
     next_ids = input_ids[0, 1:].to(model.device)  # target for next-token acc
     # For very short prompts (live typing mid-sentence) fall back to using
@@ -161,6 +166,7 @@ def read_grid(
         }
     return {
         "continuation": continuation,
+        "prompt_len": prompt_len,
         **({"ranks": ranks} if ranks is not None else {}),
         "mode": mode,
         "prompt": prompt,

@@ -304,9 +304,14 @@ function renderGrid() {
   const { layers, grid: rows, context_ids, vocab, seq_len } = data;
   const cols = colLimit == null ? seq_len : Math.min(seq_len, colLimit);
   grid.style.gridTemplateColumns = `auto repeat(${cols}, max-content)`;
+  // Columns past prompt_len are the model's own generated words — tinted, so
+  // you can see what it was thinking *while it spoke*.
+  const promptLen = data.prompt_len ?? seq_len;
+  const genCls = (t) => (t === promptLen ? " gen genb" : t > promptLen ? " gen" : "");
   const parts = ['<div class="hcell corner">layer ╲ pos</div>'];
   for (let t = 0; t < cols; t++) {
-    parts.push(`<div class="hcell"><span class="idx">${t}</span>${esc(tokStr(vocab[context_ids[t]]))}</div>`);
+    const label = t === promptLen ? '<span class="idx">↳ model says</span>' : `<span class="idx">${t}</span>`;
+    parts.push(`<div class="hcell${genCls(t)}">${label}${esc(tokStr(vocab[context_ids[t]]))}</div>`);
   }
   for (let li = 0; li < layers.length; li++) {
     const row = rows[li];
@@ -326,7 +331,7 @@ function renderGrid() {
         text = tokStr(vocab[row.top_ids[t][0]]);
         bg = probColor(row.top_probs[t][0]);
       }
-      parts.push(`<div class="cell${cls}" data-l="${li}" data-t="${t}" style="background:${bg}">${esc(text)}</div>`);
+      parts.push(`<div class="cell${cls}${genCls(t)}" data-l="${li}" data-t="${t}" style="background:${bg}">${esc(text)}</div>`);
     }
   }
   const wrap = $("grid-wrap");

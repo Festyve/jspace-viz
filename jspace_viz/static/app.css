@@ -69,6 +69,9 @@ button.primary { background: var(--accent); color: #04121f; font-weight: 600; pa
 .cell:hover { outline: 1px solid var(--accent); }
 .outrow { border-top: 2px solid var(--accent); }
 .lcell.outrow { color: var(--accent); font-weight: 700; }
+.hcell.gen { color: #7ee787; }
+.hcell.gen .idx { color: #7ee787; opacity: .75; }
+.genb { border-left: 2px solid #7ee787; }
 
 #metrics { display: flex; gap: 14px; padding: 4px 18px 18px; flex-wrap: wrap; }
 .metric { flex: 1 1 260px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }

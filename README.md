@@ -47,6 +47,9 @@ What comes back (deepseek-coder-1.3b):
   see syntax, mid layers ignite the sorting/output concepts (watch the
   `excess kurtosis` chart hump — that's the workspace band), late layers
   converge on phrasing. Click any cell to trace that token's rank everywhere.
+- **the green columns** (after `↳ model says`) — the model's *own* generated
+  words, workspace included: what it was thinking **while it spoke**. This is
+  the readout the paper's alignment-monitoring pitch is about.
 - **logit lens toggle** — same activations, no Jacobian transport: the
   mid-layer story disappears. That difference is the paper's contribution.
 
