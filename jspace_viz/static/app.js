@@ -394,8 +394,9 @@ function renderWorkspace() {
         if (promptWords.has(w) || STOP.has(w)) return;
         const p = row.top_probs[t][i];
         if (p < 0.03) return; // diffuse noise doesn't accumulate
-        const e = scores.get(w) || { score: 0, id, str };
+        const e = scores.get(w) || { score: 0, id, str, peakP: 0, peakLayer: row.layer };
         e.score += p;
+        if (p > e.peakP) { e.peakP = p; e.peakLayer = row.layer; } // where it lives
         if (!scores.has(w)) scores.set(w, e);
       });
     }
@@ -416,7 +417,7 @@ function renderWorkspace() {
     .map((e) => {
       const word = e.str.trim();
       const pop = previous.has(word.toLowerCase()) ? "" : " pop";
-      return `<span class="ws-chip${pop}" data-id="${e.id}">${esc(word)}<span class="score">${e.adj.toFixed(1)}</span></span>`;
+      return `<span class="ws-chip${pop}" data-id="${e.id}" title="strength ${e.adj.toFixed(1)}, peaks at layer ${e.peakLayer}">${esc(word)}<span class="score">${e.adj.toFixed(1)}</span><span class="peak">L${e.peakLayer}</span></span>`;
     })
     .join("");
 }
