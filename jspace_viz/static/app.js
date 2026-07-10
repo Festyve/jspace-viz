@@ -9,6 +9,9 @@ let data = null;          // last /api/read response
 let mode = "jlens";
 let pinned = [];          // [{id, str}]
 let rankViewId = null;    // token id whose ranks the grid shows, or null
+let STATIC = false;       // no backend: serve precomputed example grids
+let INFO = null;          // /api/info (or data/index.json) payload
+let selectedSlug = null;  // active example in static mode
 
 // Render a token for display: make whitespace visible, trim length.
 function tokStr(s) {
@@ -26,17 +29,42 @@ function setStatus(msg, err = false) {
 }
 
 async function init() {
-  const info = await (await fetch("/api/info")).json();
-  $("model-chip").textContent = `${info.model_id} · ${info.n_layers}L · d=${info.d_model} · ${info.device}`;
-  $("lens-chip").textContent = `lens: ${info.fitted_layers.length} layers, ${info.lens_n_prompts} prompts`;
-  for (const ex of info.examples) {
+  try {
+    const res = await fetch("api/info");
+    if (!res.ok) throw new Error();
+    INFO = await res.json();
+  } catch {
+    // No backend — static demo mode: precomputed example grids only.
+    STATIC = true;
+    INFO = await (await fetch("data/index.json")).json();
+    INFO.device = "precomputed";
+    $("prompt").readOnly = true;
+    $("topk").disabled = true;
+    $("chat").disabled = true;
+    selectedSlug = INFO.examples[0].slug;
+  }
+  $("model-chip").textContent = `${INFO.model_id} · ${INFO.n_layers}L · d=${INFO.d_model} · ${INFO.device}`;
+  $("lens-chip").textContent = `lens: ${INFO.fitted_layers.length} layers, ${INFO.lens_n_prompts} prompts`;
+  INFO.examples.forEach((ex, i) => {
     const opt = document.createElement("option");
-    opt.value = ex.prompt;
+    opt.value = String(i);
     opt.textContent = ex.name;
     $("examples").appendChild(opt);
-  }
-  $("prompt").value = info.examples[0].prompt;
+  });
+  $("prompt").value = INFO.examples[0].prompt;
   read();
+}
+
+// Static mode: ranks were precomputed for every token in any top-k cell;
+// materialize pinned_ranks rows in the shape the renderer expects.
+function applyStaticPins() {
+  if (!pinned.length) return;
+  data.grid.forEach((row, li) => {
+    row.pinned_ranks = [];
+    for (let t = 0; t < data.seq_len; t++) {
+      row.pinned_ranks.push(pinned.map((p) => data.ranks[p.id]?.[li]?.[t] ?? null));
+    }
+  });
 }
 
 async function read() {
@@ -44,7 +72,16 @@ async function read() {
   $("read").disabled = true;
   const t0 = performance.now();
   try {
-    const res = await fetch("/api/read", {
+    if (STATIC) {
+      data = await (await fetch(`data/${selectedSlug}_${mode}.json`)).json();
+      applyStaticPins();
+      renderGrid();
+      renderWorkspace();
+      renderMetrics();
+      setStatus(`${data.seq_len} tokens × ${data.layers.length} layers · precomputed demo — run it locally to type your own prompts`);
+      return;
+    }
+    const res = await fetch("api/read", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -94,10 +131,13 @@ function renderGrid() {
     for (let t = 0; t < seq_len; t++) {
       let text, bg;
       const pi = rankViewId === null ? -1 : pinned.findIndex((p) => p.id === rankViewId);
-      if (pi >= 0 && row.pinned_ranks) {
+      if (pi >= 0 && row.pinned_ranks && row.pinned_ranks[t][pi] != null) {
         const r = row.pinned_ranks[t][pi];
         text = r === 0 ? "★0" : String(r);
         bg = rankColor(r);
+      } else if (pi >= 0 && row.pinned_ranks) {
+        text = "–";
+        bg = "transparent";
       } else {
         text = tokStr(vocab[row.top_ids[t][0]]);
         bg = probColor(row.top_probs[t][0]);
@@ -265,7 +305,11 @@ $("mode-toggle").addEventListener("click", (e) => {
   read();
 });
 $("examples").addEventListener("change", (e) => {
-  if (e.target.value) { $("prompt").value = e.target.value; read(); }
+  if (e.target.value === "") return;
+  const ex = INFO.examples[+e.target.value];
+  $("prompt").value = ex.prompt;
+  if (STATIC) selectedSlug = ex.slug;
+  read();
 });
 $("read").addEventListener("click", read);
 $("prompt").addEventListener("keydown", (e) => {

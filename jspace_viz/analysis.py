@@ -37,6 +37,7 @@ def read_grid(
     max_seq_len: int = 256,
     pinned_ids: list[int] | None = None,
     chat: bool = False,
+    track_all: bool = False,
 ) -> dict[str, Any]:
     """One forward pass, then per-layer lens readouts at every position.
 
@@ -45,6 +46,11 @@ def read_grid(
     (excess kurtosis, lens next-token accuracy, adjacent-position top-1
     agreement). The final layer is always read with ``J = I`` — that row is
     the model's actual output distribution.
+
+    With ``track_all`` the result also carries a ``ranks`` map
+    ``{token_id: [n_layers][seq] rank}`` covering every token that appears in
+    any top-k cell — everything a *static* frontend needs to serve pin/trace
+    interactions without a server (see ``scripts/export_static.py``).
     """
     if chat:
         prompt = model.tokenizer.apply_chat_template(
@@ -70,6 +76,8 @@ def read_grid(
     layer_metrics: list[dict[str, Any]] = []
     token_ids_seen: set[int] = set(ids_list) | set(pinned)
     pinned_t = torch.tensor(pinned, dtype=torch.long, device=model.device) if pinned else None
+    rank_tables: dict[int, torch.Tensor] = {}  # layer -> [seq, vocab] full ranks
+    tracked_ids: set[int] = set()
 
     for layer in layers:
         residual = acts[layer][0].float()
@@ -98,6 +106,18 @@ def read_grid(
             pinned_logits = logits[:, pinned_t]  # [seq, n_pinned]
             ranks = (logits.unsqueeze(-1) > pinned_logits.unsqueeze(1)).sum(1)
             row["pinned_ranks"] = ranks.cpu().tolist()
+        if track_all:
+            # full-vocab rank table for this layer (static-export path; memory
+            # is seq * vocab ints per layer, so keep prompts short)
+            sorted_idx = logits.argsort(dim=-1, descending=True)
+            full_rank = torch.empty_like(sorted_idx)
+            full_rank.scatter_(
+                1,
+                sorted_idx,
+                torch.arange(logits.shape[-1], device=logits.device).expand_as(sorted_idx),
+            )
+            rank_tables[layer] = full_rank.to(torch.int32).cpu()
+            tracked_ids.update(top_ids.flatten().tolist())
         grid.append(row)
 
         top1 = top_ids[:, 0]
@@ -121,7 +141,14 @@ def read_grid(
 
     decode = model.tokenizer.decode
     vocab = {int(t): decode([int(t)]) for t in token_ids_seen}
+    ranks: dict[int, list[list[int]]] | None = None
+    if track_all:
+        ranks = {
+            int(t): [rank_tables[l][:, t].tolist() for l in layers]
+            for t in sorted(tracked_ids)
+        }
     return {
+        **({"ranks": ranks} if ranks is not None else {}),
         "mode": mode,
         "prompt": prompt,
         "seq_len": seq_len,
