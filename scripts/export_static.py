@@ -26,7 +26,7 @@ from jspace_viz.analysis import read_grid  # noqa: E402
 from jspace_viz.lens import JacobianLens  # noqa: E402
 from jspace_viz.model import load_model  # noqa: E402
 from jspace_viz.presets import EXAMPLES, PRESETS  # noqa: E402
-from jspace_viz.server import STATIC_DIR  # noqa: E402
+from jspace_viz.server import STATIC_DIR, load_chip_baseline  # noqa: E402
 
 
 def slugify(name: str) -> str:
@@ -63,6 +63,7 @@ def main() -> None:
         "d_model": model.d_model,
         "fitted_layers": lens.source_layers,
         "lens_n_prompts": lens.n_prompts,
+        "chip_baseline": load_chip_baseline(preset.model_id),
         "links": [
             {"name": name, "url": url}
             for name, url in (spec.split("=", 1) for spec in args.link)

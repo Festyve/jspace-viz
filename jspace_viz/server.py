@@ -50,7 +50,19 @@ def info() -> dict[str, Any]:
         "lens_source": state["lens_source"],
         "examples": EXAMPLES,
         "device": str(model.device),
+        "chip_baseline": state.get("chip_baseline", {}),
     }
+
+
+def load_chip_baseline(model_id: str) -> dict[str, float]:
+    """Neutral-text calibration for the workspace panel (see
+    ``scripts/make_chip_baseline.py``); empty when none exists for the model."""
+    path = Path(__file__).parent / "data" / "chip_baselines" / f"{model_id.split('/')[-1]}.json"
+    if path.exists():
+        import json
+
+        return json.loads(path.read_text(encoding="utf-8"))
+    return {}
 
 
 @app.post("/api/read")
@@ -128,7 +140,12 @@ def load(preset_name: str | None, model_id: str | None, lens_path: str | None, d
         raise SystemExit(
             f"lens d_model={lens.d_model} does not match model d_model={model.d_model}"
         )
-    state.update(model=model, lens=lens, model_id=model_id)
+    state.update(
+        model=model,
+        lens=lens,
+        model_id=model_id,
+        chip_baseline=load_chip_baseline(model_id),
+    )
     logger.info("ready: %s + %r on %s", model_id, lens, model.device)
 
 

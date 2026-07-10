@@ -32,4 +32,4 @@ Paper = "https://transformer-circuits.pub/2026/workspace/index.html"
 packages = ["jspace_viz"]
 
 [tool.setuptools.package-data]
-jspace_viz = ["static/*"]
+jspace_viz = ["static/*", "data/chip_baselines/*"]

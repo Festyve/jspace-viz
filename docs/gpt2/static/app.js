@@ -22,9 +22,10 @@ function tokStr(s) {
   return out.length > 12 ? out.slice(0, 11) + "…" : out;
 }
 
-function setStatus(msg, err = false) {
+function setStatus(msg, err = false, html = false) {
   const el = $("status");
-  el.textContent = msg;
+  if (html) el.innerHTML = msg;
+  else el.textContent = msg;
   el.className = err ? "err" : "";
 }
 
@@ -79,7 +80,7 @@ function renderWelcome() {
     .map((ex, i) => `<button class="ex-chip" data-i="${i}">${esc(ex.name)}</button>`)
     .join(" ");
   const typeHint = STATIC
-    ? "This is the free precomputed demo — pick an example below. To type <em>your own</em> prompts, run it locally (one command, see the repo)."
+    ? 'Pick an example below. To type <em>your own</em> prompts, clone the repo — <a href="https://github.com/Festyve/jspace-viz" target="_blank" rel="noopener">github.com/Festyve/jspace-viz</a> — and run it locally (two commands).'
     : "Type any prompt above and hit <b>Read</b> (⌘↵), or start from an example:";
   $("grid").innerHTML =
     `<div class="welcome"><p>Every cell will show what a layer of <b>${esc(INFO.model_id)}</b> ` +
@@ -122,7 +123,10 @@ async function read() {
       // Only precomputed prompts exist here; anything else → honest pointer.
       const match = INFO.examples.find((ex) => ex.prompt === $("prompt").value);
       if (!match) {
-        setStatus("this free demo is precomputed — custom prompts need the local version (github.com/Festyve/jspace-viz)", true);
+        setStatus(
+          'custom prompts need a local clone — <a href="https://github.com/Festyve/jspace-viz" target="_blank" rel="noopener">github.com/Festyve/jspace-viz</a>',
+          true, true,
+        );
         $("read").disabled = false;
         return;
       }
@@ -240,11 +244,18 @@ function renderWorkspace() {
       });
     }
   }
-  const top = [...scores.values()].sort((a, b) => b.score - a.score).slice(0, 10);
+  // Subtract each word's baseline hum on neutral text: glitch tokens appear
+  // on every prompt and cancel out; prompt-specific content survives.
+  const BASE = INFO.chip_baseline || {};
+  const top = [...scores.entries()]
+    .map(([w, e]) => ({ ...e, adj: e.score - (BASE[w] || 0) }))
+    .filter((e) => e.adj > 0.15)
+    .sort((a, b) => b.adj - a.adj)
+    .slice(0, 10);
   const panel = $("workspace-panel");
   panel.hidden = top.length === 0;
   $("workspace-chips").innerHTML = top
-    .map((e) => `<span class="ws-chip" data-id="${e.id}">${esc(e.str.trim())}<span class="score">${e.score.toFixed(1)}</span></span>`)
+    .map((e) => `<span class="ws-chip" data-id="${e.id}">${esc(e.str.trim())}<span class="score">${e.adj.toFixed(1)}</span></span>`)
     .join("");
 }
 $("workspace-chips").addEventListener("click", (e) => {
