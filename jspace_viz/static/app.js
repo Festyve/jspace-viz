@@ -102,8 +102,9 @@ $("grid").addEventListener("click", (e) => {
 });
 
 // Selecting an example types it out while the model reads along, so you
-// watch the workspace assemble as context accumulates. Static mode (no
-// server) loads it instantly instead.
+// watch the workspace assemble as context accumulates. Static mode has no
+// per-prefix reads to show, so it still types out but reveals the precomputed
+// full-prompt grid once the typing finishes.
 let playing = false;
 let playToken = 0;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -111,12 +112,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 async function loadExample(i) {
   const ex = INFO.examples[i];
   $("examples").value = String(i);
-  if (STATIC) {
-    selectedSlug = ex.slug;
-    $("prompt").value = ex.prompt;
-    read();
-    return;
-  }
+  if (STATIC) selectedSlug = ex.slug;
   const token = ++playToken;
   playing = true;
   const ta = $("prompt");
@@ -138,7 +134,9 @@ async function loadExample(i) {
       ta.scrollTop = ta.scrollHeight;
       wordsSinceRead += (added.match(/\s+/g) || []).length;
       const nWords = ta.value.trim().split(/\s+/).length;
-      if ($("live").checked && !reading && wordsSinceRead >= 2 && nWords >= 4) {
+      // Static mode has no per-prefix grids — only the full-prompt grid is
+      // precomputed — so skip live reads and just reveal it once typing ends.
+      if (!STATIC && $("live").checked && !reading && wordsSinceRead >= 2 && nWords >= 4) {
         wordsSinceRead = 0;
         read({ live: true });
       }
