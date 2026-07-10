@@ -19,6 +19,7 @@ import os
 import re
 import shutil
 import sys
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -43,6 +44,11 @@ def main() -> None:
     parser.add_argument(
         "--link", action="append", default=[],
         help="'label=url' chips linking to sibling demo pages; repeatable",
+    )
+    parser.add_argument(
+        "--analytics", default=None,
+        help="Google Analytics 4 measurement id (e.g. G-XXXX). Injected only "
+        "into the published copy, never into the source cloners run.",
     )
     args = parser.parse_args()
 
@@ -86,10 +92,22 @@ def main() -> None:
     with open(os.path.join(data_dir, "index.json"), "w", encoding="utf-8") as fh:
         json.dump(index, fh, ensure_ascii=False)
     os.makedirs(os.path.join(args.out, "static"), exist_ok=True)
-    shutil.copy(os.path.join(STATIC_DIR, "index.html"), os.path.join(args.out, "index.html"))
+    html = (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+    if args.analytics:
+        html = html.replace("</head>", _ga_snippet(args.analytics) + "</head>", 1)
+    (Path(args.out) / "index.html").write_text(html, encoding="utf-8")
     for name in ("app.js", "app.css"):
         shutil.copy(os.path.join(STATIC_DIR, name), os.path.join(args.out, "static", name))
     print(f"done — serve locally with: python -m http.server -d {args.out} 8400")
+
+
+def _ga_snippet(measurement_id: str) -> str:
+    """GA4 gtag snippet. Injected only into the published static site."""
+    return (
+        f'<script async src="https://www.googletagmanager.com/gtag/js?id={measurement_id}"></script>\n'
+        "<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}"
+        f"gtag('js',new Date());gtag('config','{measurement_id}');</script>\n"
+    )
 
 
 if __name__ == "__main__":
