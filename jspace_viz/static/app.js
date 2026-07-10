@@ -92,8 +92,9 @@ function renderGrid() {
     parts.push(`<div class="lcell${cls}">${row.is_output ? "output" : "L" + row.layer}</div>`);
     for (let t = 0; t < seq_len; t++) {
       let text, bg;
-      if (rankViewId !== null && row.pinned_ranks) {
-        const r = row.pinned_ranks[t][pinned.findIndex((p) => p.id === rankViewId)];
+      const pi = rankViewId === null ? -1 : pinned.findIndex((p) => p.id === rankViewId);
+      if (pi >= 0 && row.pinned_ranks) {
+        const r = row.pinned_ranks[t][pi];
         text = r === 0 ? "★0" : String(r);
         bg = rankColor(r);
       } else {

@@ -83,7 +83,7 @@ laptop (16 GB is enough for a ~1.3B model — fitting backprops through the mode
 
 ```bash
 # checkpointed + resumable; writes a usable partial lens after every prompt
-.venv/bin/python scripts/fit_lens.py --preset deepseek-coder-1.3b --n-prompts 40
+.venv/bin/python scripts/fit_lens.py --preset deepseek-coder-1.3b --n-prompts 40 --dim-batch 16
 .venv/bin/jspace-viz --preset deepseek-coder-1.3b
 ```
 
