@@ -39,6 +39,11 @@ button.primary { background: var(--accent); color: #04121f; font-weight: 600; pa
 .ws-chip:hover { border-color: var(--hot); }
 .ws-chip .score { color: var(--dim); font-size: 10px; }
 
+.welcome { padding: 26px 30px; max-width: 640px; color: var(--dim); font-size: 14px; line-height: 1.6; }
+.welcome b, .welcome i, .welcome em { color: var(--fg); }
+.ex-chip { background: #1c2129; border: 1px solid var(--border); border-radius: 20px; padding: 5px 14px; margin: 0 8px 8px 0; font-size: 13px; color: var(--fg); cursor: pointer; }
+.ex-chip:hover { border-color: var(--accent); color: var(--accent); }
+
 #grid-wrap { overflow: auto; margin: 6px 18px; border: 1px solid var(--border); border-radius: 8px; max-height: 58vh; background: var(--panel); }
 #grid { display: grid; font-family: var(--mono); font-size: 11px; width: max-content; }
 .cell, .hcell, .lcell {

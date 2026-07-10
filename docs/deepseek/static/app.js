@@ -51,10 +51,8 @@ async function init() {
     STATIC = true;
     INFO = await (await fetch("data/index.json")).json();
     INFO.device = "precomputed";
-    $("prompt").readOnly = true;
     $("topk").disabled = true;
     $("chat").disabled = true;
-    selectedSlug = INFO.examples[0].slug;
   }
   for (const link of INFO.links || []) {
     const a = document.createElement("a");
@@ -71,9 +69,32 @@ async function init() {
     opt.textContent = ex.name;
     $("examples").appendChild(opt);
   });
-  $("prompt").value = INFO.examples[0].prompt;
-  read();
+  renderWelcome();
 }
+
+// Blank-slate hint shown before the first read: what this is, plus the
+// examples as one-click chips.
+function renderWelcome() {
+  const chips = INFO.examples
+    .map((ex, i) => `<button class="ex-chip" data-i="${i}">${esc(ex.name)}</button>`)
+    .join(" ");
+  const typeHint = STATIC
+    ? "This is the free precomputed demo — pick an example below. To type <em>your own</em> prompts, run it locally (one command, see the repo)."
+    : "Type any prompt above and hit <b>Read</b> (⌘↵), or start from an example:";
+  $("grid").innerHTML =
+    `<div class="welcome"><p>Every cell will show what a layer of <b>${esc(INFO.model_id)}</b> ` +
+    `is <i>disposed to say</i> at each word of your prompt — its thoughts, not just its answer.</p>` +
+    `<p>${typeHint}</p><p>${chips}</p></div>`;
+}
+$("grid").addEventListener("click", (e) => {
+  const chip = e.target.closest(".ex-chip");
+  if (!chip) return;
+  const ex = INFO.examples[+chip.dataset.i];
+  $("prompt").value = ex.prompt;
+  if (STATIC) selectedSlug = ex.slug;
+  $("examples").value = chip.dataset.i;
+  read();
+});
 
 // Static mode: ranks were precomputed for every token in any top-k cell;
 // materialize pinned_ranks rows in the shape the renderer expects.
@@ -88,11 +109,24 @@ function applyStaticPins() {
 }
 
 async function read() {
+  if (!$("prompt").value.trim()) {
+    renderWelcome();
+    setStatus("type a prompt first, or pick an example");
+    return;
+  }
   setStatus("reading…");
   $("read").disabled = true;
   const t0 = performance.now();
   try {
     if (STATIC) {
+      // Only precomputed prompts exist here; anything else → honest pointer.
+      const match = INFO.examples.find((ex) => ex.prompt === $("prompt").value);
+      if (!match) {
+        setStatus("this free demo is precomputed — custom prompts need the local version (github.com/Festyve/jspace-viz)", true);
+        $("read").disabled = false;
+        return;
+      }
+      selectedSlug = match.slug;
       data = await (await fetch(`data/${selectedSlug}_${mode}.json`)).json();
       applyStaticPins();
       renderGrid();

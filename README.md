@@ -148,6 +148,9 @@ Two options:
 
 ## Roadmap
 
+- in-browser type-anything demo: GPT-2 under WebGPU (transformers.js/ONNX) with
+  shipped `J_l` matrices, so the free static site no longer needs precomputed
+  prompts
 - J-space sparse decomposition (gradient pursuit, k ≤ 25) per cell
 - interventions: J-lens-vector swaps/steering (the paper's thought-swap protocol)
 - role–filler binding probes on top of the workspace readout
