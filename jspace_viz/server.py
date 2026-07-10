@@ -153,7 +153,9 @@ def load(preset_name: str | None, model_id: str | None, lens_path: str | None, d
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Live J-space visualizer")
-    parser.add_argument("--preset", default=os.environ.get("JSPACE_PRESET", "gpt2"))
+    parser.add_argument(
+        "--preset", default=os.environ.get("JSPACE_PRESET", "deepseek-coder-1.3b")
+    )
     parser.add_argument("--model-id", default=None, help="override the preset's model")
     parser.add_argument("--lens", default=None, help="path to a fitted lens .pt")
     parser.add_argument("--dtype", default=None, choices=["float32", "float16", "bfloat16"])
