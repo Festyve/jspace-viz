@@ -91,12 +91,46 @@ function renderWelcome() {
 $("grid").addEventListener("click", (e) => {
   const chip = e.target.closest(".ex-chip");
   if (!chip) return;
-  const ex = INFO.examples[+chip.dataset.i];
-  $("prompt").value = ex.prompt;
-  if (STATIC) selectedSlug = ex.slug;
-  $("examples").value = chip.dataset.i;
-  read();
+  loadExample(+chip.dataset.i);
 });
+
+// Selecting an example types it out while the model reads along, so you
+// watch the workspace assemble as context accumulates. Static mode (no
+// server) loads it instantly instead.
+let playing = false;
+let playToken = 0;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function loadExample(i) {
+  const ex = INFO.examples[i];
+  $("examples").value = String(i);
+  if (STATIC) {
+    selectedSlug = ex.slug;
+    $("prompt").value = ex.prompt;
+    read();
+    return;
+  }
+  const token = ++playToken;
+  playing = true;
+  $("prompt").value = "";
+  const pieces = ex.prompt.split(/(\s+)/);
+  let wordsSinceRead = 0;
+  for (const piece of pieces) {
+    if (token !== playToken) return; // superseded by another selection
+    $("prompt").value += piece;
+    if (piece.trim()) wordsSinceRead++;
+    await sleep(90);
+    const nWords = $("prompt").value.trim().split(/\s+/).length;
+    if ($("live").checked && !reading && wordsSinceRead >= 3 && nWords >= 4) {
+      wordsSinceRead = 0;
+      read({ live: true });
+    }
+  }
+  playing = false;
+  if (token !== playToken) return;
+  while (reading) await sleep(100); // let the last live read settle
+  read();
+}
 
 // Static mode: ranks were precomputed for every token in any top-k cell;
 // materialize pinned_ranks rows in the shape the renderer expects.
@@ -398,10 +432,7 @@ $("mode-toggle").addEventListener("click", (e) => {
 });
 $("examples").addEventListener("change", (e) => {
   if (e.target.value === "") return;
-  const ex = INFO.examples[+e.target.value];
-  $("prompt").value = ex.prompt;
-  if (STATIC) selectedSlug = ex.slug;
-  read();
+  loadExample(+e.target.value);
 });
 $("read").addEventListener("click", read);
 $("prompt").addEventListener("keydown", (e) => {
@@ -411,6 +442,8 @@ $("prompt").addEventListener("keydown", (e) => {
 // In live mode, re-read as you type (debounced) — watch the thoughts move.
 let liveTimer = null;
 $("prompt").addEventListener("input", () => {
+  if (playing) return; // typewriter playback, not the user
+  playToken++; // typing cancels any running playback
   $("examples").value = "";
   if (STATIC || !$("live").checked) return;
   clearTimeout(liveTimer);

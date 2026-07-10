@@ -85,7 +85,10 @@ def read_grid(
         )
 
     next_ids = input_ids[0, 1:].to(model.device)  # target for next-token acc
-    valid = slice(METRICS_SKIP_FIRST, seq_len - 1)
+    # For very short prompts (live typing mid-sentence) fall back to using
+    # every position rather than producing empty slices (NaN metrics).
+    skip = METRICS_SKIP_FIRST if seq_len > METRICS_SKIP_FIRST + 2 else 0
+    valid = slice(skip, max(seq_len - 1, skip + 1))
 
     grid: list[dict[str, Any]] = []
     layer_metrics: list[dict[str, Any]] = []
@@ -136,20 +139,14 @@ def read_grid(
         grid.append(row)
 
         top1 = top_ids[:, 0]
+        acc = top1[valid][: seq_len - 1 - skip] == next_ids[valid]
+        autocorr = top1[skip : seq_len - 1] == top1[skip + 1 : seq_len]
         layer_metrics.append(
             {
                 "layer": layer,
-                "next_token_acc": round(
-                    (top1[valid] == next_ids[valid]).float().mean().item(), 4
-                ),
+                "next_token_acc": round(acc.float().mean().item(), 4) if acc.numel() else 0.0,
                 "mean_kurtosis": round(kurt[valid].mean().item(), 2),
-                "top1_autocorr": round(
-                    (top1[valid] == top1[METRICS_SKIP_FIRST + 1 : seq_len])
-                    .float()
-                    .mean()
-                    .item(),
-                    4,
-                ),
+                "top1_autocorr": round(autocorr.float().mean().item(), 4) if autocorr.numel() else 0.0,
             }
         )
         del logits, probs
