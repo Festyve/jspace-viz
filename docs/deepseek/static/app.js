@@ -31,6 +31,10 @@ function setStatus(msg, err = false) {
 // The model's actual next words (output row, last position) — shown in the
 // status line so "what does it answer" never has to be hunted for.
 function modelSays() {
+  if (data.continuation) {
+    const text = data.continuation.replace(/\s+/g, " ").trim();
+    return `model continues: “…${text}”`;
+  }
   const out = data.grid[data.grid.length - 1];
   const t = data.seq_len - 1;
   const words = out.top_ids[t].slice(0, 3).map((id) => tokStr(data.vocab[id]));

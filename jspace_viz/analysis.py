@@ -69,6 +69,18 @@ def read_grid(
         model.forward(input_ids)
         acts = {l: recorder.activations[l].detach() for l in layers}
 
+    # Greedy continuation for the "model says" readout — answers are phrases,
+    # not single tokens.
+    generated = model.hf_model.generate(
+        input_ids,
+        max_new_tokens=12,
+        do_sample=False,
+        pad_token_id=model.tokenizer.eos_token_id,
+    )
+    continuation = model.tokenizer.decode(
+        generated[0, seq_len:], skip_special_tokens=True
+    )
+
     next_ids = input_ids[0, 1:].to(model.device)  # target for next-token acc
     valid = slice(METRICS_SKIP_FIRST, seq_len - 1)
 
@@ -148,6 +160,7 @@ def read_grid(
             for t in sorted(tracked_ids)
         }
     return {
+        "continuation": continuation,
         **({"ranks": ranks} if ranks is not None else {}),
         "mode": mode,
         "prompt": prompt,
