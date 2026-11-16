@@ -3,52 +3,64 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>jspace-viz — live J-space visualizer</title>
+<meta name="description" content="Explore decoded language-model activations across layers. Compare a Jacobian lens with a logit lens.">
+<title>jspace-viz | Explore model layers</title>
 <link rel="stylesheet" href="static/app.css">
 </head>
 <body>
 <header>
   <h1>jspace-viz</h1>
-  <span class="sub">live Jacobian-lens / J-space readout &middot; <a href="https://transformer-circuits.pub/2026/workspace/index.html" target="_blank" rel="noopener">paper</a></span>
-  <span id="model-chip" class="chip">loading&hellip;</span>
-  <span id="lens-chip" class="chip"></span>
+  <span class="sub">Explore model layers</span>
+  <a href="https://github.com/Festyve/jspace-viz">GitHub</a>
+  <a href="https://transformer-circuits.pub/2026/workspace/index.html" target="_blank" rel="noopener">Paper</a>
 </header>
-
-<section id="controls">
-  <textarea id="prompt" rows="4" spellcheck="false" placeholder="Type anything — a question, half a sentence, some code — then press Read (⌘↵) to see what every layer of the model is thinking at every word."></textarea>
+<main>
+<section class="intro" aria-label="How to use this">
+  <p>Compare tokens decoded from the same activations with two different lenses.</p>
+  <p id="mode-note">Run a prompt to inspect each layer.</p>
+  <div class="model-details"><span id="model-chip" class="chip">Loading model details...</span><span id="lens-chip" class="chip"></span></div>
+</section>
+<section id="controls" aria-label="Model controls">
+  <label for="prompt">Prompt</label>
+  <textarea id="prompt" rows="4" spellcheck="false" placeholder="Enter a prompt, then select Read."></textarea>
   <div class="row">
-    <select id="examples"><option value="">examples&hellip;</option></select>
-    <div class="toggle" id="mode-toggle">
-      <button data-mode="jlens" class="active" title="transport with J_l before unembedding">J-lens</button>
-      <button data-mode="logit" title="unembed the raw residual (J = I baseline)">logit lens</button>
+    <label for="examples">Example</label>
+    <select id="examples"><option value="">Choose an example</option></select>
+    <div class="toggle" id="mode-toggle" role="group" aria-label="Lens">
+      <button data-mode="jlens" class="active" aria-pressed="true" title="Map activations to the final layer before decoding">Jacobian lens</button>
+      <button data-mode="logit" aria-pressed="false" title="Decode activations directly">Logit lens</button>
     </div>
-    <label>top-k <input id="topk" type="number" min="1" max="20" value="8"></label>
-    <label title="wrap the prompt in the model's chat template"><input id="chat" type="checkbox"> chat</label>
-    <label id="live-label" title="re-read automatically while you type — watch the thoughts change"><input id="live" type="checkbox" checked> live</label>
+    <label>Tokens per cell <input id="topk" type="number" min="1" max="20" value="8"></label>
+    <label title="Apply the model's chat template"><input id="chat" type="checkbox"> Chat template</label>
+    <label id="live-label"><input id="live" type="checkbox" checked> Update as I type</label>
     <button id="read" class="primary">Read</button>
-    <button id="jump-gen" hidden title="scroll the grid to the model's own generated words — its thoughts while it speaks">→ what it wrote</button>
-    <span id="status"></span>
+    <button id="jump-gen" hidden>Show model output</button>
   </div>
+  <p id="example-guide" class="hint" hidden></p>
+  <p id="status" role="status" aria-live="polite"></p>
   <div class="row" id="pinned-row" hidden>
-    <span class="hint">pinned:</span>
+    <span class="hint">Tracing:</span>
     <span id="pinned-chips"></span>
-    <button id="view-top1" hidden>back to top-1 view</button>
+    <button id="view-top1" hidden>Show tokens</button>
   </div>
 </section>
-
 <section id="workspace-panel" hidden>
-  <h3 title="Concepts active in the middle layers that are neither words from your prompt nor the model's literal next word — the J-space content. Click one to trace where it lives.">🧠 in the workspace right now</h3>
+  <h2 title="Heuristic ranking of decoded tokens across middle layers, filtered against the prompt and common words">Suggested tokens to trace</h2>
   <div id="workspace-chips"></div>
 </section>
-
-<section id="grid-wrap"><div id="grid"></div></section>
-
-<section id="metrics">
-  <div class="metric"><h3 title="fraction of positions where the lens top-1 equals the actual next token">next-token accuracy</h3><svg id="m-acc"></svg></div>
-  <div class="metric"><h3 title="mean excess kurtosis of lens logits — the paper's workspace-layer signature">excess kurtosis</h3><svg id="m-kurt"></svg></div>
-  <div class="metric"><h3 title="fraction of adjacent positions sharing the same lens top-1 token">top-1 autocorrelation</h3><svg id="m-auto"></svg></div>
-</section>
-
+<p class="grid-guide" id="grid-guide">Rows are layers. Columns are token positions. Blue cells show the top decoded token. Click one to trace its rank.</p>
+<section id="grid-wrap" aria-label="Layer and token grid" tabindex="0"><div id="grid"></div></section>
+<details id="metric-details">
+  <summary>Layer metrics</summary>
+  <p class="hint">One value per layer. Shading marks values above half the maximum kurtosis, not a verified workspace.</p>
+  <section id="metrics">
+    <div class="metric"><h3>Next-token match</h3><p>Fraction of positions matching the next token.</p><svg id="m-acc" role="img" aria-label="Next-token match by layer"></svg></div>
+    <div class="metric"><h3>Logit kurtosis</h3><p>Excess kurtosis of the decoded scores.</p><svg id="m-kurt" role="img" aria-label="Logit kurtosis by layer"></svg></div>
+    <div class="metric"><h3>Adjacent-token agreement</h3><p>Fraction of neighboring positions with the same top token.</p><svg id="m-auto" role="img" aria-label="Adjacent-token agreement by layer"></svg></div>
+  </section>
+</details>
+<p class="caveat">Decoded tokens are clues, not proof of how the model reasons.</p>
+</main>
 <div id="tooltip" hidden></div>
 <script src="static/app.js"></script>
 </body>
